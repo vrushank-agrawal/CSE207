@@ -78,7 +78,7 @@ int recv_UDP (char *dest_port) {
 
         // if client already exists then send reject message
         if (i==2) {
-            int j, found = 0;
+            int j;
             sockaddr_in *copy_client, *temp;
             copy_client = (sockaddr_in *) &rcv_client;
             for (j = 0; j<i; j++) {
@@ -224,7 +224,7 @@ int recv_UDP (char *dest_port) {
                                 moves++;                                        // update total moves
                                 break;                                          // if valid MOV then exit while loop
                             } else {    // otherwise send TXT until valid MOV received
-                                sleep(1);
+
                                 memset(buf, 0, sizeof(*buf));                   // set for TXT message
                                 strcpy(buf, "SInvalid Move!\0");
                                 buf[0] = 0x04;
@@ -236,6 +236,19 @@ int recv_UDP (char *dest_port) {
 
                                 #ifdef DEBUG
                                 printf("[DEBUG] Invalid MOV message sent\n");
+                                #endif
+                                
+                                // set MYM message
+                                memset(buf, 0, sizeof(*buf));                       
+                                buf[0] = 0x02;
+                                if (sendto(*(client[j].sockfd), buf, 1, 0, client[j].client, client_len) < 0) {
+                                    fprintf(stderr, "Error in sending MYM message: %s :%d\n", strerror(errno), errno);
+                                    close(sockfd);
+                                    exit(EXIT_FAILURE);
+                                }
+
+                                #ifdef DEBUG
+                                printf("[DEBUG] MYM Message sent\n");
                                 #endif
 
                             }   // if statement for update_move message
@@ -265,7 +278,13 @@ int recv_UDP (char *dest_port) {
                         buf[0] = 0x01;
                         buf[1] = moves+'0';
                         if (buf[1]) strncpy(buf+2, board_info, moves*3);     // concatenate info of moves
-                        if (sendto(*(client[j].sockfd), buf, LINE_SIZE+1, 0, client[j].client, client_len) < 0) {
+                        if (sendto(*(client[0].sockfd), buf, LINE_SIZE+1, 0, client[0].client, client_len) < 0) {
+                            fprintf(stderr, "Error in sending FYI message: %s :%d\n", strerror(errno), errno);
+                            close(sockfd);
+                            exit(EXIT_FAILURE);
+                        }
+
+                        if (sendto(*(client[1].sockfd), buf, LINE_SIZE+1, 0, client[1].client, client_len) < 0) {
                             fprintf(stderr, "Error in sending FYI message: %s :%d\n", strerror(errno), errno);
                             close(sockfd);
                             exit(EXIT_FAILURE);

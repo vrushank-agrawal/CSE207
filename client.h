@@ -2,12 +2,12 @@
 #define CLIENT_H
 
 // define DEBUG mode
-#define DEBUG
+// #define DEBUG
 // define DEBUG for function debugging
-#define DEBUG_FUNC 
+// #define DEBUG_FUNC 
 // longest input string decided by server
-#define LINE_SIZE 26
-#define INIT_MSG 7
+#define LINE_SIZE 29
+#define INIT_MSG 8
 #define MYM_SIZE 3
 typedef struct sockaddr_in sockaddr_in;
 
@@ -46,6 +46,13 @@ char *get_coord();
  */
 
 void draw_board(char * board_info, char positions);
+
+/**
+ * \brief play game
+ * \param argument passed to thread
+ */
+
+void *play_game(void *arg);
 
 /**
  * \brief receives data from server forever
