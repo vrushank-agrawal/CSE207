@@ -45,7 +45,7 @@ int send_UDP (char *dest_add, char *dest_port) {
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0) {
         fprintf(stderr, "Unable to create Socket, %s - %d\n", strerror(errno), errno);
-        exit(0);
+        exit(EXIT_FAILURE);
     }
 
     #ifdef DEBUG
@@ -111,29 +111,23 @@ int send_UDP (char *dest_add, char *dest_port) {
         // memset(send_msg, 0, sizeof(*send_msg));
         if ((recv = recvfrom(sockfd, buf, LINE_SIZE, 0, (struct sockaddr *)&IPv4, &server_len)) == -1){
             fprintf(stderr, "Error in receiving data via UDP: %s :%d\n", strerror(errno), errno);
-            free(buf);
-            free(send_msg);
             close(sockfd);
-            exit(0);
+            exit(EXIT_FAILURE);
         }
 
         // join thread if running
         if (responsding)
             if (pthread_join(thread, NULL) != 0) {
                 fprintf(stderr, "Error in joining responding thread: %s :%d\n", strerror(errno), errno);
-                free(buf);
-                free(send_msg);
                 close(sockfd);
-                exit(0);
+                exit(EXIT_FAILURE);
             }
 
         strncpy(send_msg, buf, LINE_SIZE);
         if (pthread_create(&thread, NULL, play_game, send_msg) != 0 ) {
             fprintf(stderr, "Error in creating responding thread: %s :%d\n", strerror(errno), errno);
-            free(buf);
-            free(send_msg);
             close(sockfd);
-            exit(0);
+            exit(EXIT_FAILURE);
         }
         responsding = 1; // close thread in loop
         
@@ -143,10 +137,8 @@ int send_UDP (char *dest_add, char *dest_port) {
     // close the message receiving thread from server
     if (pthread_join(thread, NULL) != 0) {
         fprintf(stderr, "Error in joining receive thread: %s :%d\n", strerror(errno), errno);
-        free(buf);
-        free(send_msg);
         close(sockfd);
-        exit(0);
+        exit(EXIT_FAILURE);
     }
 
     free(buf);
@@ -156,18 +148,14 @@ int send_UDP (char *dest_add, char *dest_port) {
 }
 
 void *play_game(void *arg) {
-
     char *buf = (char *)arg;
     int i;
 
     if (buf[0] == 0x03) {   // END
         ended = 1;              // game has ended
-        if (buf[1] == 0xFF){
+        if (buf[1] == 0xFF)
             fprintf(stderr, "No player spot found. Server denied access.\n");
-            close(sockfd);
-            free(buf);
-            pthread_exit(NULL);
-        } else if (buf[1] == '1')
+        else if (buf[1] == '1')
             printf("Player X won the game!\n");
         else if (buf[1] == '2')
             printf("Player O won the game\n");
@@ -175,6 +163,8 @@ void *play_game(void *arg) {
             printf("The game has ended as a draw\n");
         else
             printf("unexpected behaviour !! APOCALYPSE !!");
+        close(sockfd);
+        exit(EXIT_SUCCESS);
     }
     
     else if (buf[0] == 0x01) {  // FYI
@@ -201,7 +191,7 @@ void *play_game(void *arg) {
             free(buf);
             free(msg);
             close(sockfd);
-            exit(0);
+            exit(EXIT_FAILURE);
         }
         free(msg);
 
