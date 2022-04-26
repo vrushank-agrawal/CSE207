@@ -203,10 +203,10 @@ int send_UDP (char *dest_add, char *dest_port) {
             printf("[DEBUG] Received END message from server\n");
             #endif
 
-            if (buf[1] == 1)
-                printf("Player 1 won the game!\n");
-            else if (buf[1] == 2)
-                printf("Player 2 won the game\n");
+            if (buf[1] == '1')
+                printf("Player X won the game!\n");
+            else if (buf[1] == '2')
+                printf("Player O won the game\n");
             else   
                 printf("The game has ended as a draw\n");
             break; // we exit the loop
@@ -311,13 +311,14 @@ char *get_coord(){
     printf("Server has asked for the next move\n");
     char *msg = (char *)malloc(MYM_SIZE * sizeof(char));
     msg[0] = 0x05;
+    msg[2] = 0x01;
     while (1){
         printf("Column number: ");
         scanf(" %c", msg+1);
-        if (msg[1] == '1' || msg[1] == '2' || msg[1] == '3')
+        if (msg[2]==0x01 && (msg[1] == '1' || msg[1] == '2' || msg[1] == '3'))
             break;
         else
-            printf("Invalid Number. Please enter between 1 & 3\n");
+            printf("Invalid Col Number. Please enter between 1 & 3 without spaces\n");
     }
     while (1){
         printf("Row number: ");
@@ -325,8 +326,9 @@ char *get_coord(){
         if (msg[2] == '1' || msg[2] == '2' || msg[2] == '3')
             break;
         else
-            printf("Invalid Number. Please enter between 1 & 3\n");
+            printf("Invalid Row Number. Please enter between 1 & 3\n");
     }
+    printf("Your Move - COL: %c - ROW: %c\n", msg[1], msg[2]);
     return msg;
 }
 

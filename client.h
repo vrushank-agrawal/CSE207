@@ -2,7 +2,7 @@
 #define CLIENT_H
 
 // define DEBUG mode
-// #define DEBUG
+#define DEBUG
 // define DEBUG for function debugging
 #define DEBUG_FUNC 
 // longest input string decided by server
