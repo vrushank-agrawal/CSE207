@@ -3,8 +3,6 @@
 
 // define DEBUG mode for program debugging
 #define DEBUG
-// define DEBUG for function debugging
-#define DEBUG_FUNC 
 // longest string can have 9 filled positions i.e. 9*3 + 2 = 29 bytes
 #define LINE_SIZE 29    
 #define NTHREADS 30

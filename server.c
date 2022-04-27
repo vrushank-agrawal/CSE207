@@ -12,14 +12,13 @@
 #include "server.h"
 
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
-char board_state[9] = "000000000";          // 3x3 grid where 0 means box empty
-char board_info[27] = "\0";                 // we can have maximum 9 moves before a player wins
-int moves = 0;                              // number of total moves made
+char board_state[9];                        // 3x3 grid where 0 means box empty
+char board_info[27];                        // we can have maximum 9 moves before a player wins
+char moves = 0x00;                          // number of total moves made
 int game_finish = 0;                        // True if game_just finished
 sockaddr_in server;                         // defined globally for function access
 socklen_t server_len = sizeof(server);
 int sockfd, nbclients = 0, player_num = 1;
-// info_client *client = malloc((NTHREADS+1) * sizeof(*client));
 sockaddr client[2], rcv_client;
 socklen_t client_len = sizeof(rcv_client);
 pthread_t game, thread[NTHREADS];
@@ -29,7 +28,7 @@ int main (int argc, char* argv[]) {
         fprintf(stderr, "Missing argument. Please enter the PORT_NUMBER.\n");
         return 1;
     } // make sure all inputs are available
-
+    int a; for(a=0;a<9;a++) board_state[a]=0x00;    // set board state
     char *port = argv[1];    // assign values
     return recv_UDP(port);     // receive UDP message;
 }
@@ -96,10 +95,11 @@ void *decide_response(void *arg) {
     // if client already exists then send reject message
     if (nbclients==2) {
         int j;
-        sockaddr_in *copy_client;
+        sockaddr_in *copy_client, *temp;
         copy_client = (sockaddr_in *) &rcv_client;
         for (j=0;j<2;j++) {
-            if ( copy_client->sin_port == client[j].sin_port && copy_client->sin_addr.s_addr == client[j].sin_addr.s_addr ) {
+            temp = (sockaddr_in *)&client[j];
+            if ( copy_client->sin_port == temp->sin_port && copy_client->sin_addr.s_addr == temp->sin_addr.s_addr ) {
                 reject_client = 0;
                 if (pthread_create(&game, NULL, game_state, arg) != 0 ) {
                     fprintf(stderr, "Error in creating game thread: %s :%d\n", strerror(errno), errno);
@@ -132,12 +132,11 @@ void *decide_response(void *arg) {
         nbclients++;
     }
     pthread_exit(NULL);
-}   // fun decide_response
+}   // function decide_response
 
 
 void *game_state(void *arg) {
     char *buf = (char *) arg;   // msg from client
-
     player_num++;
     player_num%=2;              // interchange players
    
@@ -147,16 +146,18 @@ void *game_state(void *arg) {
         #endif
 
         char player;
-        if (player_num==1) player = '2';
-        else player = '1';
+        if (player_num==1) player = 0x02;
+        else player = 0x01;
         if (update_move(buf+1, player)) {
             strncpy(board_info+(moves*3), &player, 1);      // update player number
             strncpy(board_info+(moves*3)+1, buf+1, 2);      // update player move
             moves++;                                        // update total moves
             if (moves > 4) {   // check if player won
                 char winner;
-                if ((winner = check_win()) != '3') game_end(winner);    // End the game
+                if ((winner = check_win()) != 0x03) game_end(winner);    // End the game
             }
+            send_FYI(player%2);         // sends to next player
+            send_MYM(player%2);         // sends to next player
         } else {    // otherwise send TXT
             memset(buf, 0, sizeof(*buf));                   // set for TXT message
             strcpy(buf, "SInvalid Move!\0");
@@ -206,29 +207,40 @@ char check_win(){
         if (board_state[2] == board_state[4])
             if (board_state[4] == board_state[6])
                 return board_state[2];                  // return player number
-    if (moves == 9) return '0';
-    return '3';
+    if (moves == 9) return 0x00;
+    return 0x03;
 }
 
 int update_move(char *buf, char player) {
+    char row = buf[1];
+    char col = buf[0];
+    int i=0;
+
     #ifdef DEBUG
     printf("[DEBUG] Entered update_move()\n");
-    #endif
-
-    int row = (int)(buf[1])-49;             // convert row char to int
-    int col = (int)(buf[0])-49;             // convert col char to int
-
-    #ifdef DEBUG_FUNC
-    printf("[DEBUG_FUNC] row: %d col: %d\n", row, col);
+    printf("[DEBUG] row: %d col: %d\n", row, col);
+    printf("[DEBUG] Board before update: ");
+    for(i=0;i<9;i++) printf("%d", board_state[i]);
+    printf("\n");
     #endif
 
     if ((row>=0 && row<3) && (col>=0 && col<3)) {
-        if (board_state[(3*row)+col] == '0') {  // check if position is empty
+        if (board_state[(3*row)+col] == 0x00) {  // check if position is empty
             board_state[(3*row)+col] = player;
-            return 1;           // return success
+            #ifdef DEBUG
+            printf("[DEBUG] Board after update: ");
+            for(i=0;i<9;i++) printf("%d", board_state[i]);
+            printf("\n");
+            #endif
+            return 1;       // return success
         }
     }
-    return 0;              // return failure
+    #ifdef DEBUG
+    printf("[DEBUG] Board did not update: ");
+    for(i=0;i<9;i++) printf("%d", board_state[i]);
+    printf("\n");
+    #endif
+    return 0;               // return failure
 }
 
 void game_end(char winner) {
@@ -239,14 +251,14 @@ void game_end(char winner) {
     send_END(winner, 0);
     send_END(winner, 1);
     
-    strncpy(board_state, "000000000", 9);   // reset board
-    moves = 0;                              // reset moves
-    nbclients = 0;                                  // reset clients
+    int i;
+    for(i=0;i<9;i++) board_state[i] = 0x00;     // reset board
+    moves = 0x00;                              // reset moves
+    nbclients = 0;                             // reset clients
 
     // reset clients
-    client[0] = NULL;
-    client[1] = NULL;
-
+    memset(&client[0], 0, sizeof(sockaddr));
+    memset(&client[1], 0, sizeof(sockaddr));
     printf("Game ended, waiting for new connections\n");
 }
 
@@ -262,7 +274,7 @@ void send_MYM(int p) {
     free(mym);
 
     #ifdef DEBUG
-    printf("[DEBUG] MYM Message sent to %d\n", p);
+    printf("[DEBUG] MYM Message sent to player %d\n", p);
     #endif
 }
 
@@ -270,7 +282,7 @@ void send_FYI(int p) {
     // set FYI message
     char *fyi = malloc(LINE_SIZE*sizeof(char *));
     fyi[0] = 0x01;
-    fyi[1] = moves+'0';
+    fyi[1] = moves;
     if (fyi[1]) strncpy(fyi+2, board_info, moves*3);     // concatenate info of moves
     if (sendto(sockfd, fyi, (moves*3)+2, 0, &client[p], client_len) < 0) {
         fprintf(stderr, "Error in sending MYM message: %s :%d\n", strerror(errno), errno);
@@ -280,7 +292,10 @@ void send_FYI(int p) {
     free(fyi);  
 
     #ifdef DEBUG
-    printf("[DEBUG] FYI Message sent to %d\n", p);
+    printf("[DEBUG] FYI Message sent to player %d\n", p);
+    printf("[DEBUG] Board info sent: ");
+    int i; for(i=0;i<(moves*3);i++) printf("%d", board_info[i]);
+    printf("\n");
     #endif  
 }
 
@@ -298,7 +313,7 @@ void send_END(char winner, int p) {
     free(end);  
 
     #ifdef DEBUG
-    printf("[DEBUG] END Message sent to %d\n", p);
+    printf("[DEBUG] END Message sent to player %d\n", p);
     #endif  
 }
 

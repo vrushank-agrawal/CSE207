@@ -2,12 +2,9 @@
 #define CLIENT_H
 
 // define DEBUG mode
-// #define DEBUG
-// define DEBUG for function debugging
-// #define DEBUG_FUNC 
+#define DEBUG
 // longest input string decided by server
 #define LINE_SIZE 29
-#define MYM_SIZE 3
 typedef struct sockaddr_in sockaddr_in;
 
 /**
@@ -21,7 +18,7 @@ int send_UDP(char *dest_add, char *dest_port);
 
 /**
  * \brief get position for next move
- * \return char array of MOV message
+ * \return int array of MOV message
  */
 
 char *get_coord();
