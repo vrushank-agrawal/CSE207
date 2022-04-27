@@ -104,13 +104,21 @@ void *game_response(void *arg) {
     int i;
 
     if (buf[0] == 0x03) {   // END
-        if (buf[1] == 0xFF)
+        #ifdef DEBUG
+        printf("[DEBUG] Received END message from server\n");
+        #endif
+    
+        #ifdef DEBUG
+        printf("%d\n", *(buf+1));
+        #endif
+
+        if (*(buf+1) == 0xFF)
             fprintf(stderr, "No player spot found. Server denied access.\n");
-        else if (buf[1] == '1')
+        else if (*(buf+1) == 0x01)
             printf("Player X won the game!\n");
-        else if (buf[1] == '2')
+        else if (*(buf+1) == 0x02)
             printf("Player O won the game\n");
-        else if (buf[1] == '0')
+        else if (*(buf+1) == 0x00)
             printf("The game has ended in a draw\n");
         else
             printf("unexpected behaviour !! APOCALYPSE !!");
@@ -118,24 +126,29 @@ void *game_response(void *arg) {
         close(sockfd);
         exit(EXIT_SUCCESS);
 
-    } else if (buf[0] == 0x01) {  // FYI
+    } else if (*(buf) == 0x01) {  // FYI
         #ifdef DEBUG
         printf("[DEBUG] Received FYI message from server\n");
         #endif
 
-        #ifdef DEBUG_FUNC
-        printf("%s\n", buf);
+        #ifdef DEBUG
+        printf("1st move player: %d\n", *(buf+2));
         #endif
 
-        printf("%c filled positions:\n", *(buf+1));
-        draw_board(buf + 2, buf[1]);
+        printf("%i filled positions:\n", *(buf+1));
+        draw_board(buf + 2, *(buf+1));
 
-    } else if (buf[0] == 0x02){   // MYM
+    } else if (*(buf) == 0x02){   // MYM
         #ifdef DEBUG
         printf("[DEBUG] Received MYM message from server\n");
         #endif
 
         char *msg = get_coord(); // get coord to play
+        
+        #ifdef DEBUG
+        printf("[DEBUG] MSG SENT - COL: %X - ROW: %X\n", msg[1], msg[2]);
+        #endif
+
         if (sendto(sockfd, msg, LINE_SIZE, 0, (struct sockaddr *)&IPv4, sizeof(IPv4)) < 0) {
             fprintf(stderr, "Error in sending data: %s :%d\n", strerror(errno), errno);
             close(sockfd);
@@ -147,22 +160,22 @@ void *game_response(void *arg) {
         printf("[DEBUG] Sent MYM message to server\n");
         #endif
 
-    } else if (buf[0] == 0x04) {    // TXT
+    } else if (*(buf) == 0x04) {    // TXT
         #ifdef DEBUG
         printf("[DEBUG] Received TXT message from server\n");
         #endif
 
         i = 1;
         char *msg = (char *)malloc((strlen((char *)buf)-1)*sizeof(char)); 
-        while (buf[i] != '\0') {
-            msg[i-1] = buf[i];
+        while (*(buf+i) != '\0') {
+            msg[i-1] = *(buf+i);
             i++;
         }
-        msg[++i] = '\0';
+        msg[i] = '\0';
         printf("Server says: %s\n", msg);
         free(msg);
         
-    } else if (buf[0] == 0x06) {    // LTI
+    } else if (*(buf) == 0x06) {    // LTI
         #ifdef DEBUG
         printf("[DEBUG] Received LTI message from server ??\n");
         #endif
@@ -176,51 +189,59 @@ char *get_coord(){
     #endif
 
     printf("Server has asked for your move\n");
-    char *msg = (char *)malloc(MYM_SIZE * sizeof(char));
+
+    char *msg = malloc(3 * sizeof(char));    
     msg[0] = 0x05;
     while (1){
-        printf("Column number: ");
+        printf("Enter Column: ");
         scanf(" %c", msg+1);
-        if ((msg[1] == '1' || msg[1] == '2' || msg[1] == '3'))
+        if (msg[1] == '0' || msg[1] == '1' || msg[1] == '2')
             break;
         else
-            printf("Invalid Col Number. Please enter between 1 & 3 without spaces\n");
+            printf("Invalid Col Number. Please enter between 0 & 2\n");
     }
     while (1){
-        printf("Row number: ");
+        printf("Enter Row: ");
         scanf(" %c", msg+2);
-        if (msg[2] == '1' || msg[2] == '2' || msg[2] == '3')
+        if (msg[2] == '0' || msg[2] == '1' || msg[2] == '2')
             break;
         else
-            printf("Invalid Row Number. Please enter between 1 & 3\n");
+            printf("Invalid Row Number. Please enter between 0 & 2\n");
     }
-    printf("Your Move - COL: %c - ROW: %c\n", msg[1], msg[2]);
+
+    if (msg[1]=='0') msg[1]=0x00; 
+    else if (msg[1]=='1') msg[1]=0x01;
+    else msg[1]=0x02;
+    if (msg[2]=='0') msg[2]=0x00;
+    else if (msg[2]=='1') msg[2]=0x01;
+    else msg[2]=0x02;
     return msg;
 }
 
-void draw_board(char *buf, char positions) {
+void draw_board(char *buf, char pos) {
     #ifdef DEBUG
     printf("[DEBUG] Entered draw_board()\n");
     #endif
 
-    #ifdef DEBUG_FUNC
-    printf("[DEBUG_FUNC] board_info: %s\n", buf);
+    char i = 0x00;
+    char board[9] = "         ";        // 3x3 entries of tic tac toe are initialized to be empty
+    
+    #ifdef DEBUG
+    for (i=0x00;i<3*pos;i+=0x01) printf("%i", *(buf+i));
     #endif
 
-    int i = 0;
-    int pos = atoi(&positions);
-    char board[9] = "         ";        // 3x3 entries of tic tac toe are initialized to be empty
-    for (i=0;i<pos;i++){
-        char p = buf[3*i];              // number of player is either 1 or 2
-        int player = atoi(&p);
-        char c = buf[(3*i)+1];          // column number - 1 to align with zero
-        int col = (int)(c)-49;          // idk weird arithemtics
-        char r = buf[(3*i)+2];          // row number -1 to align with zero
-        int row = (int)(r)-49;          // idk weird arithmetics
-        if (player == 1)
+    for (i=0x00;i<pos;i+=0x01){
+        char player = *(buf+(3*i));              // number of player is either 1 or 2
+        char col = *(buf+((3*i)+1));          
+        char row = *(buf+((3*i)+2));          
+        if (player == 0x01)
             board[3*row+col] = 'X';     // if player 1 then we mark X
         else
             board[3*row+col] = 'O';     // if player 2 then we mark O
+
+        #ifdef DEBUG
+        printf("[DEBUG] p: %d col: %d row:%d \n", player, col, row);
+        #endif
     }
     // now we simply draw the tic-tac-toe board
     printf("|---+---+---|\n");
