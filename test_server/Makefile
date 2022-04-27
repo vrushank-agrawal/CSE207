@@ -1,11 +1,9 @@
 
 LINK_TARGET = \
-	client \
-	server
+	client
 
 OBJS = \
-	client.o \
-	server.o
+	client.o
 
 REBUILDABLES = $(OBJS) $(LINK_TARGET)
 
@@ -17,12 +15,7 @@ clean:
 client : client.o
 	cc -g3 -o  $@ $< -lpthread
 
-server : server.o
-	cc -g3 -o  $@ $< -lpthread
-
-%.o : %.c
+client.o : client.c
 	cc -g3 -Wall -o $@ -c $<
-
-server.o: server.h
 
 client.o: client.h

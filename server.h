@@ -5,10 +5,9 @@
 #define DEBUG
 // define DEBUG for function debugging
 #define DEBUG_FUNC 
-// longest string can have 9 filled positions i.e. 9*3 + 2 = 26 bytes
+// longest string can have 9 filled positions i.e. 9*3 + 2 = 29 bytes
 #define LINE_SIZE 29    
-// we can have max 2 clients and 1 thread to reject others
-#define NTHREADS 3
+#define NTHREADS 30
 typedef struct sockaddr sockaddr;
 typedef struct sockaddr_in sockaddr_in;
 
@@ -53,19 +52,59 @@ int update_move(char *buf, char player);
 char check_win();
 
 /**
- * \brief define actions to be performed by the thread
- * \param arg is struct info_client
- * \return 0 on success else error code.
+ * \brief check if Game has ended
+ * \param winner is winner info
  */
 
-void *welcomeThread(void *arg);
+void game_end(char winner);
+
+/**
+ * \brief send FYI message
+ * \param p is player to send info to
+ */
+
+void send_FYI(int p);
+
+/**
+ * \brief send MYM message
+ * \param p is player to send info to
+ */
+
+void send_MYM(int p);
+
+/**
+ * \brief send END message
+ * \param is winner info
+ * \param p is player to send info to
+ */
+
+void send_END(char winner, int p);
+
+/**
+ * \brief send welcome message
+ */
+
+void welcome_fun();
 
 /**
  * \brief sends connection reject message
- * \param arg is the port number passed as char
- * \return 0 on success else error code.
+ * \param arg
  */
 
 void *rejectThread(void *arg);
+
+/**
+ * \brief checks status of game
+ * \param arg is the message from client
+ */
+
+void *game_state(void *arg);
+
+/**
+ * \brief checks if client req is valid
+ * \param arg
+ */
+
+void *decide_response(void *arg);
 
 #endif // SERVER_H

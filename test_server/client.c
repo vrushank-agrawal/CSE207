@@ -106,9 +106,9 @@ void *game_response(void *arg) {
     if (buf[0] == 0x03) {   // END
         if (buf[1] == 0xFF)
             fprintf(stderr, "No player spot found. Server denied access.\n");
-        else if (buf[1] == 1)
+        else if (buf[1] == '1')
             printf("Player X won the game!\n");
-        else if (buf[1] == 2)
+        else if (buf[1] == '2')
             printf("Player O won the game\n");
         else if (buf[1] == '0')
             printf("The game has ended in a draw\n");
@@ -181,7 +181,7 @@ char *get_coord(){
     while (1){
         printf("Column number: ");
         scanf(" %c", msg+1);
-        if ((msg[1] == 1 || msg[1] == 2 || msg[1] == 3))
+        if ((msg[1] == '1' || msg[1] == '2' || msg[1] == '3'))
             break;
         else
             printf("Invalid Col Number. Please enter between 1 & 3 without spaces\n");
@@ -189,7 +189,7 @@ char *get_coord(){
     while (1){
         printf("Row number: ");
         scanf(" %c", msg+2);
-        if (msg[2] == 1 || msg[2] == 2 || msg[2] == 3)
+        if (msg[2] == '1' || msg[2] == '2' || msg[2] == '3')
             break;
         else
             printf("Invalid Row Number. Please enter between 1 & 3\n");
