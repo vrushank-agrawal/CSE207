@@ -48,15 +48,13 @@ int send_UDP (char *dest_add, char *dest_port) {
     pthread_t thread;
     void *buf = malloc(LINE_SIZE+1);
     void *send_msg = malloc(LINE_SIZE+1);
-    char *init_msg = malloc(9);
-    memcpy(init_msg, "HHello\0", 8);
-    *(init_msg) = 0x04; // Set type of message to TXT
-    if (sendto(sockfd, init_msg, LINE_SIZE, 0, (struct sockaddr *)&IPv4, server_len) < 0) {
+    memcpy(buf, "HHello\0", 8);
+    memset(buf, 0x04, 1);           // Set type of message to TXT
+    if (sendto(sockfd, buf, LINE_SIZE, 0, (struct sockaddr *)&IPv4, server_len) < 0) {
         fprintf(stderr, "Error in sending data: %s :%d\n", strerror(errno), errno);
         close(sockfd);
         exit(0);
     }
-    free(init_msg);
 
     #ifdef DEBUG
     printf("[DEBUG] Sent Hello Message\n");
@@ -70,7 +68,6 @@ int send_UDP (char *dest_add, char *dest_port) {
             close(sockfd);
             exit(EXIT_FAILURE);
         }
-
         // join thread if running
         if (responsding)
             if (pthread_join(thread, NULL) != 0) {
@@ -78,7 +75,6 @@ int send_UDP (char *dest_add, char *dest_port) {
                 close(sockfd);
                 exit(EXIT_FAILURE);
             }
-
         memcpy(send_msg, buf, LINE_SIZE);
         
         #ifdef DEBUG
@@ -120,11 +116,11 @@ void *game_response(void *arg) {
 
         if (*(unsigned char *)(buf+1) == 0xFF)
             fprintf(stderr, "No player spot found. Server denied access.\n");
-        else if (*(unsigned char *)(buf+1) == 0x01)
+        else if (*(char *)(buf+1) == 0x01)
             printf("Player X won the game!\n");
-        else if (*(unsigned char *)(buf+1) == 0x02)
+        else if (*(char *)(buf+1) == 0x02)
             printf("Player O won the game\n");
-        else if (*(unsigned char *)(buf+1) == 0x00)
+        else if (*(char *)(buf+1) == 0x00)
             printf("The game has ended in a draw\n");
         else
             printf("unexpected behaviour !! APOCALYPSE !!\n");
@@ -132,7 +128,6 @@ void *game_response(void *arg) {
         exit(EXIT_SUCCESS);
 
     } else if (*(char *)(buf) == 0x01) {  // FYI
-        
         #ifdef DEBUG
         char pos = *(char *)(buf+1);
         printf("[DEBUG] Received FYI message from server\n");
@@ -209,7 +204,6 @@ char *get_coord(){
     #ifdef DEBUG
     printf("[DEBUG_F] Get_Coord() Col: %i Row: %i\n", msg[1], msg[2]);
     #endif
-
     return msg;
 }
 

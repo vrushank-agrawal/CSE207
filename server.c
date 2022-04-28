@@ -52,8 +52,8 @@ int recv_UDP (char *dest_port) {
     }
 
     printf("Sock binded. Waiting ...\n");
-    char *buf = malloc((LINE_SIZE+1) * sizeof(char));
-    char temp_msg[LINE_SIZE];
+    void *buf = malloc((LINE_SIZE+1) * sizeof(char));
+    void *temp_msg = malloc((LINE_SIZE+1) * sizeof(char));
     int recvd;
     sockaddr temp;
     socklen_t temp_len = sizeof(temp);
@@ -66,17 +66,16 @@ int recv_UDP (char *dest_port) {
             close(sockfd);
             exit(EXIT_FAILURE);
         }
-
-        strncpy(buf, temp_msg, LINE_SIZE);
-        rcv_client = temp;
+        memcpy(buf, temp_msg, LINE_SIZE);           // send msg with diff address
+        rcv_client = temp;                          // keep client with diff address
         if (pthread_create(&thread[0], NULL, decide_response, buf) != 0 ) {
             fprintf(stderr, "Error in creating respose deciding thread: %s :%d\n", strerror(errno), errno);
             close(sockfd);
             exit(EXIT_FAILURE);
-        }
+        }   // process the message
     }   // main while loop to listen to clients
-
     free(buf);
+    free(temp_msg);
     close(sockfd);
     return 0;
 }   // recv_UDP function
@@ -85,8 +84,7 @@ int recv_UDP (char *dest_port) {
 void *decide_response(void *arg) {
     int reject_client = 1;
     
-    // if client already exists then send reject message
-    if (nbclients==2) {
+    if (nbclients==2) {     // if client already exists then send reject message
         int j;
         sockaddr_in *copy_client, *temp;
         copy_client = (sockaddr_in *) &rcv_client;
@@ -102,16 +100,14 @@ void *decide_response(void *arg) {
                 pthread_exit(NULL);
             }
         }   // client exists
-    } else {
-        reject_client = 0;
-    }
+    } else reject_client = 0;   // client does not exist
     
     if (reject_client) {
         if (pthread_create(&thread[0], NULL, rejectThread, NULL) != 0 ) {
             fprintf(stderr, "Error in creating responding thread: %s :%d\n", strerror(errno), errno);
             close(sockfd);
             exit(EXIT_FAILURE);
-        }
+        }   // reject the client
     } else {  // create new client
         if (!nbclients) {
             client[0] = rcv_client;
@@ -131,11 +127,11 @@ void *decide_response(void *arg) {
 
 
 void *game_state(void *arg) {
-    char *buf = (char *) arg;   // msg from client
+    void *buf = arg;   // msg from client
     player_num++;
     player_num%=2;              // interchange players
    
-    if (buf[0] == 0x05) {
+    if (*(char *)buf == 0x05) {
         #ifdef DEBUG
         printf("[DEBUG] MOV Message received\n");
         #endif
@@ -144,8 +140,8 @@ void *game_state(void *arg) {
         if (player_num==1) player = 0x02;
         else player = 0x01;
         if (update_move(buf+1, player)) {
-            strncpy(board_info+(moves*3), &player, 1);      // update player number
-            strncpy(board_info+(moves*3)+1, buf+1, 2);      // update player move
+            memcpy(board_info+(moves*3), &player, 1);      // update player number
+            memcpy(board_info+(moves*3)+1, buf+1, 2);      // update player move
             moves++;                                        // update total moves
             if (moves > 4) {   // check if player won
                 char winner;
@@ -161,19 +157,19 @@ void *game_state(void *arg) {
             send_MYM(player%2);         // sends to next player
         } else {    // otherwise send TXT
             memset(buf, 0, sizeof(*buf));                   // set for TXT message
-            strcpy(buf, "SInvalid Move!\0");
-            buf[0] = 0x04;
+            memcpy(buf, "SInvalid Move!\0", 16);
+            memset(buf, 0x04, 1);
             if (sendto(sockfd, buf, 17, 0, &client[player_num], client_len) < 0) {
                 fprintf(stderr, "Error in sending 'Invalid Move' TXT message: %s :%d\n", strerror(errno), errno);
                 close(sockfd);
                 exit(EXIT_FAILURE);
             }
-
             #ifdef DEBUG
             printf("[DEBUG] Invalid MOV message sent\n");
             #endif
-            
-            send_MYM(player_num);       // send MYM message
+            send_MYM(player_num);       // send MYM message            
+            player_num++;
+            player_num%=2;              // reset player
         }   // if statement for update_move message
     }
     pthread_exit(NULL);
@@ -240,9 +236,9 @@ char check_win(){
     return 0x03;
 }
 
-int update_move(char *buf, char player) {
-    char row = buf[1];
-    char col = buf[0];
+int update_move(void *buf, char player) {
+    char row = *(char *)(buf+1);
+    char col = *(char *)(buf);
     int i=0;
 
     #ifdef DEBUG
@@ -291,8 +287,8 @@ void game_end(char winner) {
 }
 
 void send_MYM(int p) {
-    char *mym = malloc(sizeof(char *));
-    mym[0] = 0x02;
+    void *mym = malloc(sizeof(char *));
+    memset(mym, 0x02, 1);
     if (sendto(sockfd, mym, 1, 0, &client[p], client_len) < 0) {
         fprintf(stderr, "Error in sending MYM message: %s :%d\n", strerror(errno), errno);
         close(sockfd);
@@ -306,10 +302,10 @@ void send_MYM(int p) {
 }
 
 void send_FYI(int p) {
-    char *fyi = malloc(LINE_SIZE*sizeof(char *));
-    fyi[0] = 0x01;
-    fyi[1] = moves;
-    if (fyi[1]) strncpy(fyi+2, board_info, moves*3);     // concatenate info of moves
+    void *fyi = malloc(LINE_SIZE*sizeof(char *));
+    memset(fyi, 0x01, 1);
+    memset(fyi+1, moves, 1);
+    if (moves) memcpy(fyi+2, board_info, moves*3);     // concatenate info of moves
     if (sendto(sockfd, fyi, (moves*3)+2, 0, &client[p], client_len) < 0) {
         fprintf(stderr, "Error in sending MYM message: %s :%d\n", strerror(errno), errno);
         close(sockfd);
@@ -326,9 +322,9 @@ void send_FYI(int p) {
 }
 
 void send_END(char winner, int p) {
-    char *end = malloc(2*sizeof(char *));
-    end[0] = 0x03;
-    end[1] = winner;
+    void *end = malloc(2*sizeof(char *));
+    memset(end, 0x03, 1);
+    memset(end+1, winner, 1);
     if (sendto(sockfd, end, 2, 0, &client[p], client_len) < 0) {
         fprintf(stderr, "Error in sending END message: %s :%d\n", strerror(errno), errno);
         close(sockfd);
@@ -346,19 +342,18 @@ void welcome_fun() {
     printf("[DEBUG] Entered welcome_fun()\n");
     #endif
 
-    char welcome_msg[20];
-    strcpy(welcome_msg, "WWelcome Player x!\0");
-    welcome_msg[0] = 0x04;
+    void *welcome_msg = malloc(20*sizeof(char));
+    memcpy(welcome_msg, "WWelcome Player x!\0", 20);
+    memset(welcome_msg, 0x04, 1);
     char temp = 'X';                // to put player number
     if (nbclients == 1) temp = 'O';
-    welcome_msg[16] = temp;
-
+    memset(welcome_msg+16, temp, 1);
     if (sendto(sockfd, welcome_msg, 20, 0, &client[nbclients], client_len) < 0) {
         fprintf(stderr, "Error in sending Welcome message: %s :%d\n", strerror(errno), errno);
         close(sockfd);
         exit(EXIT_FAILURE);
     }
-    
+    free(welcome_msg);
     #ifdef DEBUG
     printf("[DEBUG] Sent Welcome message to a client\n");
     #endif
@@ -370,13 +365,15 @@ void *rejectThread (void *arg) {
     #endif
 
     // create END message
-    char buf[2];
-    buf[0] = 0x03; buf[1] = 0xFF;
-    if (sendto(sockfd, buf, 2, 0, &rcv_client, client_len) < 0) {
+    void *reject_msg = malloc(20*sizeof(char));
+    memset(reject_msg, 0x03, 1);
+    memset(reject_msg+1, 0xFF, 1);
+    if (sendto(sockfd, reject_msg, 2, 0, &rcv_client, client_len) < 0) {
         fprintf(stderr, "Error in sending Rejection message: %s :%d\n", strerror(errno), errno);
         close(sockfd);
         exit(EXIT_FAILURE);
     }
+    free(reject_msg);
 
     #ifdef DEBUG
     printf("[DEBUG] Sent rejection message to a client\n");

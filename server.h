@@ -40,7 +40,7 @@ int recv_UDP(char *dest_port);
  * \return 1 if valid move otherwise 0
  */
 
-int update_move(char *buf, char player);
+int update_move(void *buf, char player);
 
 /**
  * \brief checks if game ended
