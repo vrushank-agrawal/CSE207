@@ -2,9 +2,9 @@
 #define CLIENT_H
 
 // define DEBUG mode
-#define DEBUG
+// #define DEBUG
 // longest input string decided by server
-#define LINE_SIZE 80
+#define LINE_SIZE 29
 typedef struct sockaddr_in sockaddr_in;
 
 /**
@@ -29,7 +29,7 @@ char *get_coord();
  * \param number of filled positions
  */
 
-void draw_board(char * board_info, char positions);
+void draw_board(void *board_info, char positions);
 
 /**
  * \brief play game
