@@ -12,7 +12,7 @@
 #include "server.h"
 
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
-char board_state[9];                        // 3x3 grid where 0 means box empty
+char board_state[9];                        // 3x3 grid where 0x00 means box empty
 char board_info[27];                        // we can have maximum 9 moves before a player wins
 char moves = 0x00;                          // number of total moves made
 int game_finish = 0;                        // True if game_just finished
@@ -29,8 +29,8 @@ int main (int argc, char* argv[]) {
         return 1;
     } // make sure all inputs are available
     int a; for(a=0;a<9;a++) board_state[a]=0x00;    // set board state
-    char *port = argv[1];    // assign values
-    return recv_UDP(port);     // receive UDP message;
+    char *port = argv[1];       // assign values
+    return recv_UDP(port);      // receive UDP message;
 }
 
 int recv_UDP (char *dest_port) {
@@ -39,12 +39,10 @@ int recv_UDP (char *dest_port) {
         fprintf(stderr, "Unable to create Socket, %s - %d\n", strerror(errno), errno);
         exit(EXIT_FAILURE);
     }
-
     int port = strtol(dest_port, NULL, 10);
     server.sin_family = AF_INET;
     server.sin_port = htons(port);
     server.sin_addr.s_addr = INADDR_ANY;
-
     if (bind(sockfd, (struct sockaddr *)&server, sizeof(server)) < 0){
         fprintf(stderr, "Error in binding connection: %s :%d\n", strerror(errno), errno);
         close(sockfd);
@@ -135,14 +133,13 @@ void *game_state(void *arg) {
         #ifdef DEBUG
         printf("[DEBUG] MOV Message received\n");
         #endif
-
         char player;
         if (player_num==1) player = 0x02;
         else player = 0x01;
         if (update_move(buf+1, player)) {
             memcpy(board_info+(moves*3), &player, 1);      // update player number
             memcpy(board_info+(moves*3)+1, buf+1, 2);      // update player move
-            moves++;                                        // update total moves
+            moves++;                                       // update total moves
             if (moves > 4) {   // check if player won
                 char winner;
                 if ((winner = check_win()) != 0x03) {
@@ -180,7 +177,6 @@ char check_win(){
     #ifdef DEBUG
     printf("[DEBUG] Entered check_win()\n");
     #endif
-
     int i;
     for (i=0;i<3;i++) {                                 // check for match in a row
         if (board_state[3*i] != 0x00)
@@ -239,16 +235,13 @@ char check_win(){
 int update_move(void *buf, char player) {
     char row = *(char *)(buf+1);
     char col = *(char *)(buf);
-    int i=0;
-
     #ifdef DEBUG
     printf("[DEBUG] Entered update_move()\n");
     printf("[DEBUG] row: %i col: %i\n", row, col);
     printf("[DEBUG] Board before update: ");
-    for(i=0;i<9;i++) printf("%d", board_state[i]);
+    int i=0; for(i=0;i<9;i++) printf("%d", board_state[i]);
     printf("\n");
     #endif
-
     if ((row>=0 && row<3) && (col>=0 && col<3)) {
         if (board_state[(3*row)+col] == 0x00) {  // check if position is empty
             board_state[(3*row)+col] = player;
@@ -295,7 +288,6 @@ void send_MYM(int p) {
         exit(EXIT_FAILURE);
     }
     free(mym);
-
     #ifdef DEBUG
     printf("[DEBUG] MYM Message sent to player %d\n", p);
     #endif
@@ -312,7 +304,6 @@ void send_FYI(int p) {
         exit(EXIT_FAILURE);
     }
     free(fyi);  
-
     #ifdef DEBUG
     printf("[DEBUG] FYI Message sent to player %d\n", p);
     printf("[DEBUG] Board info sent: ");
@@ -331,7 +322,6 @@ void send_END(char winner, int p) {
         exit(EXIT_FAILURE);
     }
     free(end);  
-
     #ifdef DEBUG
     printf("[DEBUG] END Msg sent to P: %i with Winner: %i\n", p, winner);
     #endif  
@@ -341,7 +331,6 @@ void welcome_fun() {
     #ifdef DEBUG
     printf("[DEBUG] Entered welcome_fun()\n");
     #endif
-
     void *welcome_msg = malloc(20*sizeof(char));
     memcpy(welcome_msg, "WWelcome Player x!\0", 20);
     memset(welcome_msg, 0x04, 1);
@@ -363,7 +352,6 @@ void *rejectThread (void *arg) {
     #ifdef DEBUG
     printf("[DEBUG] Entered rejectThread()\n");
     #endif
-
     // create END message
     void *reject_msg = malloc(20*sizeof(char));
     memset(reject_msg, 0x03, 1);
@@ -374,7 +362,6 @@ void *rejectThread (void *arg) {
         exit(EXIT_FAILURE);
     }
     free(reject_msg);
-
     #ifdef DEBUG
     printf("[DEBUG] Sent rejection message to a client\n");
     #endif
