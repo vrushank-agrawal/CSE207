@@ -85,6 +85,16 @@ int send_UDP (char *dest_add, char *dest_port) {
             }
 
         strncpy(send_msg, buf, LINE_SIZE);
+        
+        #ifdef DEBUG_F
+        printf("[DEBUG] Received message from server\n");
+        printf("[DEBUG] buf received: ");
+        char i; for (i=0x00;i<LINE_SIZE;i++) printf("%i", *(buf+i));
+        printf("\n[DEBUG] send_msg received: ");
+        for (i=0x00;i<LINE_SIZE;i++) printf("%i", *(send_msg+i));
+        printf("\n");
+        #endif
+
         if (pthread_create(&thread, NULL, game_response, send_msg) != 0 ) {
             fprintf(stderr, "Error in creating responding thread: %s :%d\n", strerror(errno), errno);
             close(sockfd);
@@ -103,12 +113,16 @@ void *game_response(void *arg) {
     char *buf = (char *)arg;
     int i;
 
+    #ifdef DEBUG
+    printf("[DEBUG] Received message from server\n");
+    printf("%i\n", *(buf));
+    #endif
+    
     if (buf[0] == 0x03) {   // END
+        unsigned char *buf = (unsigned char *)arg;
+        
         #ifdef DEBUG
         printf("[DEBUG] Received END message from server\n");
-        #endif
-    
-        #ifdef DEBUG
         printf("%i\n", *(buf+1));
         #endif
 
@@ -122,17 +136,14 @@ void *game_response(void *arg) {
             printf("The game has ended in a draw\n");
         else
             printf("unexpected behaviour !! APOCALYPSE !!\n");
-
         close(sockfd);
         exit(EXIT_SUCCESS);
 
     } else if (*(buf) == 0x01) {  // FYI
+        char pos = *(buf+1);
+        
         #ifdef DEBUG
         printf("[DEBUG] Received FYI message from server\n");
-        #endif
-
-        char pos = *(buf+1);
-        #ifdef DEBUG
         printf("[DEBUG] buf received: ");
         char i; for (i=0x00;i<(3*pos)+2;i++) printf("%i", *(buf+i));
         printf("\n");
@@ -142,25 +153,22 @@ void *game_response(void *arg) {
         draw_board(buf + 2, *(buf+1));
 
     } else if (*(buf) == 0x02){   // MYM
-        #ifdef DEBUG
-        printf("[DEBUG] Received MYM message from server\n");
-        #endif
-
         char *msg = get_coord(); // get coord to play
         
         #ifdef DEBUG
-        printf("[DEBUG] MSG SENT - COL: %X - ROW: %X\n", msg[1], msg[2]);
+        printf("[DEBUG] Received MYM message from server\n");
+        printf("[DEBUG] MSG SENT - COL: %i - ROW: %i\n", msg[1], msg[2]);
         #endif
 
         if (sendto(sockfd, msg, LINE_SIZE, 0, (struct sockaddr *)&IPv4, sizeof(IPv4)) < 0) {
-            fprintf(stderr, "Error in sending data: %s :%d\n", strerror(errno), errno);
+            fprintf(stderr, "Error in sending MOV data: %s :%d\n", strerror(errno), errno);
             close(sockfd);
             exit(EXIT_FAILURE);
         }
         free(msg);
 
         #ifdef DEBUG
-        printf("[DEBUG] Sent MYM message to server\n");
+        printf("[DEBUG] Sent MOV message to server\n");
         #endif
 
     } else if (*(buf) == 0x04) {    // TXT

@@ -4,7 +4,7 @@
 // define DEBUG mode
 #define DEBUG
 // longest input string decided by server
-#define LINE_SIZE 29
+#define LINE_SIZE 80
 typedef struct sockaddr_in sockaddr_in;
 
 /**

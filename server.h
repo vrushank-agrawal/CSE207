@@ -43,7 +43,7 @@ int recv_UDP(char *dest_port);
 int update_move(char *buf, char player);
 
 /**
- * \brief sets FYI message to be sent
+ * \brief checks if game ended
  * \return 0 if draw, 3 if game not over, else player number
  */
 

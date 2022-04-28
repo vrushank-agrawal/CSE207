@@ -50,11 +50,8 @@ int recv_UDP (char *dest_port) {
         close(sockfd);
         exit(EXIT_FAILURE);
     }
-    
-    #ifdef DEBUG
-    printf("[DEBUG] Sock created and binded\n");
-    #endif
-    
+
+    printf("Sock binded. Waiting ...\n");
     char *buf = malloc((LINE_SIZE+1) * sizeof(char));
     char temp_msg[LINE_SIZE];
     int recvd;
@@ -77,16 +74,12 @@ int recv_UDP (char *dest_port) {
             close(sockfd);
             exit(EXIT_FAILURE);
         }
-
-        #ifdef DEBUG
-        printf("[DEBUG] Received initial message from a client\n");
-        #endif
     }   // main while loop to listen to clients
 
     free(buf);
     close(sockfd);
     return 0;
-}
+}   // recv_UDP function
 
 
 void *decide_response(void *arg) {
@@ -114,7 +107,7 @@ void *decide_response(void *arg) {
     }
     
     if (reject_client) {
-        if (pthread_create(&thread[2], NULL, rejectThread, NULL) != 0 ) {
+        if (pthread_create(&thread[0], NULL, rejectThread, NULL) != 0 ) {
             fprintf(stderr, "Error in creating responding thread: %s :%d\n", strerror(errno), errno);
             close(sockfd);
             exit(EXIT_FAILURE);
@@ -122,9 +115,11 @@ void *decide_response(void *arg) {
     } else {  // create new client
         if (!nbclients) {
             client[0] = rcv_client;
+            printf("Client 1 assigned\n");
             welcome_fun();
         } else if (nbclients == 1) {
             client[1] = rcv_client;
+            printf("Client 2 assigned\n");
             welcome_fun();
             send_FYI(0);        // start game by sending FYI to first player
             send_MYM(0);        // ask for MOV
@@ -154,7 +149,13 @@ void *game_state(void *arg) {
             moves++;                                        // update total moves
             if (moves > 4) {   // check if player won
                 char winner;
-                if ((winner = check_win()) != 0x03) game_end(winner);    // End the game
+                if ((winner = check_win()) != 0x03) {
+                    #ifdef DEBUG
+                    printf("[DEBUG] Winner Declared: %i in Moves: %i\n", winner, moves);
+                    #endif
+                    game_end(winner);    // End the game
+                    pthread_exit(NULL);
+                }
             }
             send_FYI(player%2);         // sends to next player
             send_MYM(player%2);         // sends to next player
@@ -186,28 +187,56 @@ char check_win(){
 
     int i;
     for (i=0;i<3;i++) {                                 // check for match in a row
-        if (board_state[3*i] != '0')
+        if (board_state[3*i] != 0x00)
             if (board_state[3*i] == board_state[3*i+1])
-                if (board_state[3*i+1] == board_state[3*i+2])
+                if (board_state[3*i+1] == board_state[3*i+2]) {
+                    #ifdef DEBUG
+                    printf("[DEBUG] Winner Announced Line 193\n");
+                    #endif
                     return board_state[3*i];            // return player number
+                }
     }
+    #ifdef DEBUG
+    printf("[DEBUG] Entered Col check()\n");
+    #endif
     for (i=0;i<3;i++) {                                 // check for match in a col
-        if (board_state[i] != '0')
+        if (board_state[i] != 0x00)
             if (board_state[i] == board_state[3+i])
-                if (board_state[3+i] == board_state[6+i])
+                if (board_state[3+i] == board_state[6+i]) {
+                    #ifdef DEBUG
+                    printf("[DEBUG] Winner Announced Line 202\n");
+                    #endif
                     return board_state[i];              // return player number
+                }
     }
+    #ifdef DEBUG
+    printf("[DEBUG] Entered Diag1 Check\n");
+    #endif
     // check for match in first diagonal
-    if (board_state[0] != '0')
+    if (board_state[0] != 0x00)
         if (board_state[0] == board_state[4])
-            if (board_state[4] == board_state[8])
+            if (board_state[4] == board_state[8]){
+                #ifdef DEBUG
+                printf("[DEBUG] Winner Announced Line 211\n");
+                #endif
                 return board_state[0];                  // return player number
+            }
     // check for match in second diagonal
-    if (board_state[2] != '0')
+    #ifdef DEBUG
+    printf("[DEBUG] Entered Diag2 check\n");
+    #endif
+    if (board_state[2] != 0x00)
         if (board_state[2] == board_state[4])
-            if (board_state[4] == board_state[6])
+            if (board_state[4] == board_state[6]) {
+                #ifdef DEBUG
+                printf("[DEBUG] Winner Announced Line 219\n");
+                #endif
                 return board_state[2];                  // return player number
-    if (moves == 9) return 0x00;
+            }
+    #ifdef DEBUG
+    printf("[DEBUG] Moves: %i\n", moves);
+    #endif
+    if (moves == 0x09) return 0x00;
     return 0x03;
 }
 
@@ -218,7 +247,7 @@ int update_move(char *buf, char player) {
 
     #ifdef DEBUG
     printf("[DEBUG] Entered update_move()\n");
-    printf("[DEBUG] row: %d col: %d\n", row, col);
+    printf("[DEBUG] row: %i col: %i\n", row, col);
     printf("[DEBUG] Board before update: ");
     for(i=0;i<9;i++) printf("%d", board_state[i]);
     printf("\n");
@@ -244,26 +273,24 @@ int update_move(char *buf, char player) {
 }
 
 void game_end(char winner) {
-    // send FYI messages
+    // Send final state of board
     send_FYI(0);
     send_FYI(1);
-    // send END messages
+    // Declare Winner
     send_END(winner, 0);
     send_END(winner, 1);
     
     int i;
     for(i=0;i<9;i++) board_state[i] = 0x00;     // reset board
-    moves = 0x00;                              // reset moves
-    nbclients = 0;                             // reset clients
-
-    // reset clients
-    memset(&client[0], 0, sizeof(sockaddr));
-    memset(&client[1], 0, sizeof(sockaddr));
+    moves = 0x00;                               // reset moves
+    nbclients = 0;                              // reset Num of clients
+    player_num = 1;                             // reset player num
+    memset(&client[0], 0, sizeof(sockaddr));    // reset client 1
+    memset(&client[1], 0, sizeof(sockaddr));    // reset client 2
     printf("Game ended, waiting for new connections\n");
 }
 
 void send_MYM(int p) {
-    // set MYM message
     char *mym = malloc(sizeof(char *));
     mym[0] = 0x02;
     if (sendto(sockfd, mym, 1, 0, &client[p], client_len) < 0) {
@@ -279,7 +306,6 @@ void send_MYM(int p) {
 }
 
 void send_FYI(int p) {
-    // set FYI message
     char *fyi = malloc(LINE_SIZE*sizeof(char *));
     fyi[0] = 0x01;
     fyi[1] = moves;
@@ -300,11 +326,9 @@ void send_FYI(int p) {
 }
 
 void send_END(char winner, int p) {
-    // set FYI message
     char *end = malloc(2*sizeof(char *));
-    end[0] = 0x01;
-    if (winner == '0') end[1] = 0xFF;
-    else end[1] = winner;
+    end[0] = 0x03;
+    end[1] = winner;
     if (sendto(sockfd, end, 2, 0, &client[p], client_len) < 0) {
         fprintf(stderr, "Error in sending END message: %s :%d\n", strerror(errno), errno);
         close(sockfd);
@@ -313,7 +337,7 @@ void send_END(char winner, int p) {
     free(end);  
 
     #ifdef DEBUG
-    printf("[DEBUG] END Message sent to player %d\n", p);
+    printf("[DEBUG] END Msg sent to P: %i with Winner: %i\n", p, winner);
     #endif  
 }
 
@@ -357,6 +381,5 @@ void *rejectThread (void *arg) {
     #ifdef DEBUG
     printf("[DEBUG] Sent rejection message to a client\n");
     #endif
-
     pthread_exit(NULL);
 }
