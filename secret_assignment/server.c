@@ -235,9 +235,12 @@ char check_win(){
 int update_move(void *buf, char player) {
     char row = *(char *)(buf+1);
     char col = *(char *)(buf);
+    if (row==0x00 || row==0x01 || row==0x02) ;
+    else if (col==0x00 || col==0x01 || col==0x02) ;
+    else return 0;
     #ifdef DEBUG
     printf("[DEBUG] Entered update_move()\n");
-    printf("[DEBUG] row: %i col: %i\n", row, col);
+    printf("[DEBUG] row: %x col: %x\n", row, col);
     printf("[DEBUG] Board before update: ");
     int i=0; for(i=0;i<9;i++) printf("%d", board_state[i]);
     printf("\n");

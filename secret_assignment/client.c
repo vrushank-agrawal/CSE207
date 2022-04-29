@@ -135,6 +135,9 @@ void *game_response(void *arg) {
         char *msg = get_coord(); // get coord to play
         #ifdef DEBUG
         printf("[DEBUG] Received MYM message from server\n");
+        printf("zero: %d\n", msg[0]);
+        printf("first: %d\n", msg[1]);
+        printf("second: %d\n", msg[2]);
         printf("[DEBUG] MSG SENT - COL: %i - ROW: %i\n", msg[1], msg[2]);
         #endif
         if (sendto(sockfd, msg, LINE_SIZE, 0, (struct sockaddr *)&IPv4, sizeof(IPv4)) < 0) {
@@ -175,21 +178,33 @@ char *get_coord(){
     printf("Server has asked for your move\n");
     char *m = malloc(3 * sizeof(char));    
     memset(m, 0x05, 1);
-    int i;
+    int i, n;
     while (1){
         printf("Enter Column:");
-        scanf("%d", &i);
-        if (i==0 || i==1 || i==2) break;
-        else printf("Invalid Col Number. Please enter between 0 & 2\n");
+        n=scanf("%d", &i);
+        #ifdef DEBUG
+        printf("%d\n", i);
+        #endif
+        if (n==1) {
+            if (i==0 || i==1 || i==2) break;
+            else printf("Invalid Col Number. Please enter between 0 & 2\n");
+        }
+        // fflush(stdin);
     }
     if (i==0) m[1] = 0x00;
     else if (i==1) m[1] = 0x01;
     else m[1] = 0x02;
     while (1){
-        printf("Enter Row: ");
-        scanf("%d", &i);
-        if (i==0 || i==1 || i==2) break;
-        else printf("Invalid Row Number. Please enter between 0 & 2\n");
+        printf("Enter Row:");
+        n=scanf("%d", &i);
+        #ifdef DEBUG
+        printf("%d\n", i);
+        #endif
+        if (n==1) {
+            if (i==0 || i==1 || i==2) break;
+            else printf("Invalid Row Number. Please enter between 0 & 2\n");
+        }
+        // fflush(stdin);
     }
     if (i==0) m[2] = 0x00;
     else if (i==1) m[2] = 0x01;
