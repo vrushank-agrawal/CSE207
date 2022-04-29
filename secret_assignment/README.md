@@ -17,5 +17,5 @@ This is the code for the secret assignment for the course CSE207.
 
 - The test_server file contains a dummy server code provided to rigorously test our own code with.
 - To run the test_server you may need to change execute settings using `chmod u=rwx`
-- The exec.sh file is provided to test the test_server by creating 101 clients and check how many can be assigned.
-- After several tests, it turns out that the test_server has bugs and is definitely not perfect.
+- The exec.sh file is a shell script written to check the number of clients assignable by the test_server by creating 101 clients.
+- After several tests, it turns out that the test_server has bugs and is definitely not perfect. For ex. it does not reject an incoming client when the available slots are full.
