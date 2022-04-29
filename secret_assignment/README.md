@@ -12,3 +12,10 @@ This is the code for the secret assignment for the course CSE207.
 - The game follows all the rules of a normal tic-tac-toe game with player 1 being assigned `x` and player 2 `o` for their moves. 
 - The players should only input integer values between `0` and `2` (yeah we are in Computer Science) for the row and column on their turns.
 - On input of a character value, the scanf function does not detect the wrong value type and this creates an infinite loop of inputs (simply put the user hacks the client)
+
+## Test_server
+
+- The test_server file contains a dummy server code provided to rigorously test our own code with.
+- To run the test_server you may need to change execute settings using `chmod u=rwx`
+- The exec.sh file is provided to test the test_server by creating 101 clients and check how many can be assigned.
+- After several tests, it turns out that the test_server has bugs and is definitely not perfect.
