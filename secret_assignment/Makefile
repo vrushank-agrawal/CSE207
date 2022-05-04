@@ -1,4 +1,3 @@
-
 LINK_TARGET = \
 	client \
 	server
@@ -21,7 +20,7 @@ server : server.o
 	cc -g3 -o  $@ $< -lpthread
 
 %.o : %.c
-	cc -g3 -Wall -o $@ -c $<
+	cc -g3 -Wall -Werror -o $@ -c $<
 
 server.o: server.h
 

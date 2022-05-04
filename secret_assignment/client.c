@@ -178,37 +178,30 @@ char *get_coord(){
     printf("Server has asked for your move\n");
     char *m = malloc(3 * sizeof(char));    
     memset(m, 0x05, 1);
-    int i, n;
+    char input[LINE_SIZE];
+    unsigned int i;
     while (1){
         printf("Enter Column:");
-        n=scanf("%d", &i);
+        fgets(input, LINE_SIZE, stdin);
+        sscanf(input, "%x", &i);
         #ifdef DEBUG
         printf("%d\n", i);
         #endif
-        if (n==1) {
-            if (i==0 || i==1 || i==2) break;
-            else printf("Invalid Col Number. Please enter between 0 & 2\n");
-        }
-        // fflush(stdin);
+        if (i>=0x00 && i<=0x02) break;
+        else printf("Invalid Col Number. Please enter between 0 & 2\n");
     }
-    if (i==0) m[1] = 0x00;
-    else if (i==1) m[1] = 0x01;
-    else m[1] = 0x02;
+    m[1] = i;
     while (1){
         printf("Enter Row:");
-        n=scanf("%d", &i);
+        fgets(input, LINE_SIZE, stdin);
+        sscanf(input, "%x", &i);
         #ifdef DEBUG
         printf("%d\n", i);
         #endif
-        if (n==1) {
-            if (i==0 || i==1 || i==2) break;
-            else printf("Invalid Row Number. Please enter between 0 & 2\n");
-        }
-        // fflush(stdin);
+        if (i>=0x00 && i<=0x02) break;
+        else printf("Invalid Row Number. Please enter between 0 & 2\n");
     }
-    if (i==0) m[2] = 0x00;
-    else if (i==1) m[2] = 0x01;
-    else m[2] = 0x02;
+    m[2]=i;
     #ifdef DEBUG
     printf("[DEBUG] Get_Coord() Col: %i Row: %i\n", m[1], m[2]);
     #endif
